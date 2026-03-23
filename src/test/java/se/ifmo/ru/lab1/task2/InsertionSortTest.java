@@ -1,114 +1,153 @@
 package se.ifmo.ru.lab1.task2;
 
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.assertj.core.api.Assertions.*;
 
 class InsertionSortTest {
 
     private final InsertionSort sorter = new InsertionSort();
 
-    @Test
-    @DisplayName("Сортировка пустого массива не изменяет его")
-    void shouldHandleEmptyArray() {
-        int[] array = new int[0];
-        int[] result = sorter.sort(array, new InsertionSort.Trace());
-        assertArrayEquals(new int[0], result);
+    @Nested
+    @DisplayName("Валидация входных параметров")
+    class ValidationTests {
+
+        @Test
+        @DisplayName("Должен выбрасывать исключение при null массиве")
+        void shouldThrowException_whenArrayIsNull() {
+            int[] array = null;
+            InsertionSort.Trace trace = new InsertionSort.Trace();
+
+            assertThatThrownBy(() -> sorter.sort(array, trace))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
     }
 
-    @Test
-    @DisplayName("Сортировка массива из одного элемента")
-    void shouldHandleSingleElement() {
-        int[] array = {42};
-        int[] result = sorter.sort(array, new InsertionSort.Trace());
-        assertArrayEquals(new int[]{42}, result);
+    @Nested
+    @DisplayName("Базовые случаи")
+    class BaseCasesTests {
+
+        @Test
+        @DisplayName("Сортировка пустого массива не изменяет его")
+        void shouldHandleEmptyArray() {
+            int[] array = new int[0];
+            InsertionSort.Trace trace = new InsertionSort.Trace();
+
+            int[] actualResult = sorter.sort(array, trace);
+
+            assertThat(actualResult)
+                    .isEmpty();
+        }
+
+        @Test
+        @DisplayName("Сортировка массива из одного элемента")
+        void shouldHandleSingleElement() {
+            int[] array = {42};
+            InsertionSort.Trace trace = new InsertionSort.Trace();
+
+            int[] actualResult = sorter.sort(array, trace);
+
+            assertThat(actualResult)
+                    .containsExactly(42);
+        }
     }
 
-    @Test
-    @DisplayName("Сортировка уже отсортированного массива")
-    void shouldHandleAlreadySortedArray() {
-        int[] array = {1, 2, 3, 4, 5};
-        InsertionSort.Trace trace = new InsertionSort.Trace();
-        int[] result = sorter.sort(array, trace);
+    @Nested
+    @DisplayName("Корректность сортировки")
+    class SortingTests {
 
-        assertArrayEquals(new int[]{1, 2, 3, 4, 5}, result);
-        List<String> events = trace.getEvents();
-        // Проверяем только количество характерных точек внешнего цикла
-        long outerCount = events.stream().filter(e -> e.startsWith("OUTER")).count();
-        assertEquals(4, outerCount);
+        @Test
+        @DisplayName("Должен корректно сортировать уже отсортированный массив")
+        void shouldHandleAlreadySortedArray() {
+            int[] array = {1, 2, 3, 4, 5};
+            InsertionSort.Trace trace = new InsertionSort.Trace();
+
+            int[] actualResult = sorter.sort(array, trace);
+            List<String> actualEvents = trace.getEvents();
+
+            assertThat(actualResult)
+                    .containsExactly(1, 2, 3, 4, 5);
+
+            long outerLoopCount = actualEvents.stream()
+                    .filter(e -> e.startsWith("OUTER"))
+                    .count();
+
+            assertThat(outerLoopCount)
+                    .isEqualTo(4);
+        }
+
+        @Test
+        @DisplayName("Должен сортировать массив с дубликатами")
+        void shouldSortArrayWithDuplicates() {
+            int[] array = {3, 1, 2, 3, 1};
+
+            int[] actualResult = sorter.sort(array, new InsertionSort.Trace());
+
+            assertThat(actualResult)
+                    .containsExactly(1, 1, 2, 3, 3);
+        }
     }
 
-    @Test
-    @DisplayName("Сортировка массива, содержащего дубликаты")
-    void shouldSortArrayWithDuplicates() {
-        int[] array = {3, 1, 2, 3, 1};
-        int[] result = sorter.sort(array, new InsertionSort.Trace());
-        assertArrayEquals(new int[]{1, 1, 2, 3, 3}, result);
-    }
+    @Nested
+    @DisplayName("Трассировка алгоритма")
+    class TraceTests {
 
-    @Test
-    @DisplayName("Подробная трассировка характерных точек для типичного примера")
-    void shouldProduceExpectedTraceForTypicalInput() {
-        int[] array = {5, 2, 4, 6, 1, 3};
-        InsertionSort.Trace trace = new InsertionSort.Trace();
+        @Test
+        @DisplayName("Должен формировать корректную трассировку для типичного случая")
+        void shouldProduceExpectedTraceForTypicalInput() {
+            int[] array = {5, 2, 4, 6, 1, 3};
+            InsertionSort.Trace trace = new InsertionSort.Trace();
 
-        int[] result = sorter.sort(array, trace);
+            List<String> expectedEvents = List.of(
+                    "OUTER i=1",
+                    "COMPARE i=1 j=0",
+                    "SHIFT from=0 to=1",
+                    "INSERT pos=0 key=2",
 
-        assertArrayEquals(new int[]{1, 2, 3, 4, 5, 6}, result);
+                    "OUTER i=2",
+                    "COMPARE i=2 j=1",
+                    "SHIFT from=1 to=2",
+                    "COMPARE i=2 j=0",
+                    "INSERT pos=1 key=4",
 
-        List<String> events = trace.getEvents();
+                    "OUTER i=3",
+                    "COMPARE i=3 j=2",
+                    "INSERT pos=3 key=6",
 
-        // Эталонная последовательность попадания в характерные точки
-        List<String> expectedPrefix = List.of(
-                "OUTER i=1",
-                "COMPARE i=1 j=0",
-                "SHIFT from=0 to=1",
-                "INSERT pos=0 key=2",
+                    "OUTER i=4",
+                    "COMPARE i=4 j=3",
+                    "SHIFT from=3 to=4",
+                    "COMPARE i=4 j=2",
+                    "SHIFT from=2 to=3",
+                    "COMPARE i=4 j=1",
+                    "SHIFT from=1 to=2",
+                    "COMPARE i=4 j=0",
+                    "SHIFT from=0 to=1",
+                    "INSERT pos=0 key=1",
 
-                "OUTER i=2",
-                "COMPARE i=2 j=1",
-                "SHIFT from=1 to=2",
-                "COMPARE i=2 j=0",
-                "INSERT pos=1 key=4",
+                    "OUTER i=5",
+                    "COMPARE i=5 j=4",
+                    "SHIFT from=4 to=5",
+                    "COMPARE i=5 j=3",
+                    "SHIFT from=3 to=4",
+                    "COMPARE i=5 j=2",
+                    "SHIFT from=2 to=3",
+                    "COMPARE i=5 j=1",
+                    "INSERT pos=2 key=3"
+            );
 
-                "OUTER i=3",
-                "COMPARE i=3 j=2",
-                "INSERT pos=3 key=6",
+            int[] actualResult = sorter.sort(array, trace);
+            List<String> actualEvents = trace.getEvents();
 
-                "OUTER i=4",
-                "COMPARE i=4 j=3",
-                "SHIFT from=3 to=4",
-                "COMPARE i=4 j=2",
-                "SHIFT from=2 to=3",
-                "COMPARE i=4 j=1",
-                "SHIFT from=1 to=2",
-                "COMPARE i=4 j=0",
-                "SHIFT from=0 to=1",
-                "INSERT pos=0 key=1",
+            assertThat(actualResult)
+                    .containsExactly(1, 2, 3, 4, 5, 6);
 
-                "OUTER i=5",
-                "COMPARE i=5 j=4",
-                "SHIFT from=4 to=5",
-                "COMPARE i=5 j=3",
-                "SHIFT from=3 to=4",
-                "COMPARE i=5 j=2",
-                "SHIFT from=2 to=3",
-                "COMPARE i=5 j=1",
-                "INSERT pos=2 key=3"
-        );
-
-        assertEquals(expectedPrefix, events);
-    }
-
-    @Test
-    @DisplayName("Передача null массива приводит к исключению")
-    void shouldThrowOnNullArray() {
-        assertThrows(IllegalArgumentException.class, () -> sorter.sort(null, new InsertionSort.Trace()));
+            assertThat(actualEvents)
+                    .isEqualTo(expectedEvents);
+        }
     }
 }
-

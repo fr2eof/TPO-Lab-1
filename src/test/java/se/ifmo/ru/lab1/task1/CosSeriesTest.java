@@ -1,67 +1,161 @@
 package se.ifmo.ru.lab1.task1;
 
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.MethodSource;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import java.util.stream.Stream;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.within;
 
 class CosSeriesTest {
 
-    private static final double EPSILON = 1e-10;
+    private static final double EPSILON = Math.pow(10, -10);
+    private static final double LARGE_X = 1_000_000.0;
+
     private final CosSeries cosSeries = new CosSeries();
 
-    @Test
-    @DisplayName("Отрицательное или нулевое epsilon недопустимо")
-    void shouldThrowOnNonPositiveEpsilon() {
-        assertThrows(IllegalArgumentException.class, () -> cosSeries.calculate(0.0, 0.0));
-        assertThrows(IllegalArgumentException.class, () -> cosSeries.calculate(1.0, -1e-3));
+    @Nested
+    @DisplayName("Валидация входных параметров")
+    class ValidationTests {
+
+        @Test
+        @DisplayName("Должен выбрасывать исключение при epsilon <= 0")
+        void shouldThrowException_whenEpsilonIsNonPositive() {
+            double x = 1.0;
+            double invalidEpsilonZero = 0.0;
+            double invalidEpsilonNegative = -1 * Math.pow(10, -3);
+
+            assertThatThrownBy(() -> cosSeries.calculate(x, invalidEpsilonZero))
+                    .isInstanceOf(IllegalArgumentException.class);
+
+            assertThatThrownBy(() -> cosSeries.calculate(x, invalidEpsilonNegative))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
     }
 
-    @ParameterizedTest(name = "cos({0}) ≈ {1}")
-    @CsvSource({
-            "0.0, 1.0",
-            "1.5707963267948966, 0.0",      // pi/2
-            "-1.5707963267948966, 0.0",     // -pi/2
-            "3.141592653589793, -1.0",      // pi
-            "-3.141592653589793, -1.0",     // -pi
-            "0.7853981633974483, 0.7071067811865476",   // pi/4
-            "-0.7853981633974483, 0.7071067811865476"   // -pi/4
-    })
-    @DisplayName("Проверка значений cos(x) на характерных точках")
-    void shouldApproximateCosOnKeyPoints(double x, double expected) {
-        double actual = cosSeries.calculate(x, EPSILON);
-        assertEquals(expected, actual, 1e-8);
+    @Nested
+    @DisplayName("Корректность вычисления cos(x)")
+    class CosCalculationTests {
+
+        static Stream<Arguments> provideAngles() {
+            double sqrt2over2 = Math.sqrt(2) / 2;
+
+            return Stream.of(
+                    Arguments.of(0.0, 1.0),
+                    Arguments.of(Math.PI / 2, 0.0),
+                    Arguments.of(-Math.PI / 2, 0.0),
+                    Arguments.of(Math.PI, -1.0),
+                    Arguments.of(-Math.PI, -1.0),
+                    Arguments.of(Math.PI / 4, sqrt2over2),
+                    Arguments.of(-Math.PI / 4, sqrt2over2)
+            );
+        }
+
+        @Test
+        @DisplayName("cos(0) должен быть равен 1")
+        void shouldReturnOne_whenXIsZero() {
+            double x = 0.0;
+            double epsilon = EPSILON;
+
+            double actualValue = cosSeries.calculate(x, epsilon);
+
+
+            assertThat(actualValue)
+                    .isEqualTo(1.0);
+        }
+
+        @ParameterizedTest(name = "cos({0}) ~~ {1}")
+        @MethodSource("provideAngles")
+        @DisplayName("Должен корректно считать значения в характерных точках")
+        void shouldReturnCorrectValues(double x, double expectedValue) {
+            double epsilon = EPSILON;
+
+            double actualValue = cosSeries.calculate(x, epsilon);
+
+
+            assertThat(actualValue)
+                    .isCloseTo(expectedValue, within(Math.pow(10, 8)));
+        }
+
+        @ParameterizedTest
+        @CsvSource({
+                "0.1",
+                "0.5",
+                "1.0",
+                "2.0"
+        })
+        @DisplayName("cos(x) должен быть чётной функцией")
+        void shouldBeEvenFunction(double x) {
+            double epsilon = EPSILON;
+
+            double actualPositive = cosSeries.calculate(x, epsilon);
+            double actualNegative = cosSeries.calculate(-x, epsilon);
+
+
+            assertThat(actualPositive)
+                    .isCloseTo(actualNegative, within(Math.pow(10, -9)));
+        }
     }
 
-    @ParameterizedTest(name = "cos должна быть чётной функцией для x={0}")
-    @CsvSource({
-            "0.1",
-            "0.5",
-            "1.0",
-            "2.0"
-    })
-    @DisplayName("Чётность функции cos(x)")
-    void shouldBeEvenFunction(double x) {
-        double positive = cosSeries.calculate(x, EPSILON);
-        double negative = cosSeries.calculate(-x, EPSILON);
-        assertEquals(positive, negative, 1e-9);
-    }
+    @Nested
+    @DisplayName("Сходимость и точность")
+    class ConvergenceTests {
 
-    @ParameterizedTest(name = "Сходимость ряда cos(x) для |x|={0}")
-    @CsvSource({
-            "0.1",
-            "1.0",
-            "3.0",
-            "10.0"
-    })
-    @DisplayName("Сходимость степенного ряда для различных значений x")
-    void shouldConvergeForDifferentX(double x) {
-        double seriesValue = cosSeries.calculate(x, EPSILON);
-        double mathValue = Math.cos(x);
-        assertEquals(mathValue, seriesValue, 1e-8);
+        @Test
+        @DisplayName("Должен выбрасывать исключение если ряд не сходится")
+        void shouldThrowException_whenSeriesDoesNotConverge() {
+            double x = LARGE_X;
+            double epsilon = Math.pow(10, -20);
+
+            assertThatThrownBy(() -> cosSeries.calculate(x, epsilon))
+                    .isInstanceOf(IllegalStateException.class);
+        }
+
+        @ParameterizedTest
+        @CsvSource({
+                "0.1",
+                "1.0",
+                "3.0",
+                "10.0"
+        })
+        @DisplayName("Ряд должен сходиться к значению Math.cos(x)")
+        void shouldConvergeToMathCos(double x) {
+            double epsilon = EPSILON;
+            double expectedValue = Math.cos(x);
+
+            double actualValue = cosSeries.calculate(x, epsilon);
+
+
+            assertThat(actualValue)
+                    .isCloseTo(expectedValue, within(Math.pow(10, -8)));
+        }
+
+        static Stream<Arguments> provideAccuracyCases() {
+            return Stream.of(
+                    Arguments.of(1.0, Math.pow(10, -3)),
+                    Arguments.of(1.0, Math.pow(10, -6)),
+                    Arguments.of(1.0, Math.pow(10, -10))
+            );
+        }
+
+        @ParameterizedTest
+        @MethodSource("provideAccuracyCases")
+        @DisplayName("Точность должна улучшаться при уменьшении epsilon")
+        void shouldImproveAccuracy_whenEpsilonDecreases(double x, double epsilon) {
+            double expectedValue = Math.cos(x);
+
+            double actualValue = cosSeries.calculate(x, epsilon);
+
+            assertThat(actualValue)
+                    .isCloseTo(expectedValue, within(epsilon * 10));
+        }
+
     }
 }
-

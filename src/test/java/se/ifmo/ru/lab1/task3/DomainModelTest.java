@@ -1,43 +1,112 @@
 package se.ifmo.ru.lab1.task3;
 
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.*;
 
 class DomainModelTest {
 
-    @Test
-    @DisplayName("Простетный Вогон Джельц медленно улыбается из-за проблем с мышечной памятью")
-    void vogonSmilesSlowlyBecauseOfMuscleProblem() {
-        Character vogon = new Character("Простетный Вогон Джельц", "вогон");
+    @Nested
+    @DisplayName("Character")
+    class CharacterTests {
 
-        vogon.smile(SmileSpeed.SLOW, SmileReason.MUSCLE_MEMORY_PROBLEM);
-        vogon.addEmotion(Emotion.CONFUSED);
+        @Test
+        @DisplayName("Должен корректно задавать улыбку и эмоции")
+        void shouldSetSmileAndEmotion() {
+            Character vogon = new Character("Простетный Вогон Джельц", "вогон");
 
-        assertEquals("Простетный Вогон Джельц", vogon.getName());
-        assertEquals("вогон", vogon.getSpecies());
-        assertEquals(SmileSpeed.SLOW, vogon.getSmileSpeed());
-        assertEquals(SmileReason.MUSCLE_MEMORY_PROBLEM, vogon.getSmileReason());
-        assertTrue(vogon.hasEmotion(Emotion.CONFUSED));
+            vogon.smile(SmileSpeed.SLOW, SmileReason.MUSCLE_MEMORY_PROBLEM);
+            vogon.addEmotion(Emotion.CONFUSED);
+
+            assertThat(vogon.getName())
+                    .isEqualTo("Простетный Вогон Джельц");
+
+            assertThat(vogon.getSpecies())
+                    .isEqualTo("вогон");
+
+            assertThat(vogon.getSmileSpeed())
+                    .isEqualTo(SmileSpeed.SLOW);
+
+            assertThat(vogon.getSmileReason())
+                    .isEqualTo(SmileReason.MUSCLE_MEMORY_PROBLEM);
+
+            assertThat(vogon.getEmotions())
+                    .contains(Emotion.CONFUSED);
+        }
+
+        @Test
+        @DisplayName("Должен выбрасывать исключение при null параметрах улыбки")
+        void shouldThrowException_whenSmileParamsAreNull() {
+            Character vogon = new Character("Простетный Вогон Джельц", "вогон");
+
+            assertThatThrownBy(() -> vogon.smile(null, SmileReason.FOR_EFFECT))
+                    .isInstanceOf(NullPointerException.class);
+
+            assertThatThrownBy(() -> vogon.smile(SmileSpeed.SLOW, null))
+                    .isInstanceOf(NullPointerException.class);
+        }
+
+        @Test
+        @DisplayName("Должен выбрасывать исключение при null эмоции")
+        void shouldThrowException_whenEmotionIsNull() {
+            Character vogon = new Character("Простетный Вогон Джельц", "вогон");
+
+            assertThatThrownBy(() -> vogon.addEmotion(null))
+                    .isInstanceOf(NullPointerException.class);
+        }
     }
 
-    @Test
-    @DisplayName("После освежающей серии воплей Вогон отдохнувший и готов к гнусности")
-    void tortureSessionMakesVogonRestedAndReadyForNastiness() {
-        Character vogon = new Character("Простетный Вогон Джельц", "вогон");
-        Character prisoner = new Character("пленник", "человек");
-        TortureSession session = new TortureSession(vogon);
-        session.addPrisoner(prisoner);
+    @Nested
+    @DisplayName("TortureSession")
+    class TortureSessionTests {
 
-        session.performRefreshingScreamSeries(1);
+        @Test
+        @DisplayName("Освежающая серия воплей делает палача отдохнувшим и готовым к гнусности")
+        void shouldMakeVogonRestedAndReadyForNastiness() {
+            Character vogon = new Character("Простетный Вогон Джельц", "вогон");
+            Character prisoner = new Character("пленник", "человек");
+            TortureSession session = new TortureSession(vogon);
 
-        assertTrue(session.isRefreshing());
-        assertEquals(1, session.getScreamSeriesCount());
-        assertTrue(session.getPrisoners().contains(prisoner));
-        assertTrue(vogon.hasEmotion(Emotion.RESTED));
-        assertTrue(vogon.hasEmotion(Emotion.READY_FOR_NASTINESS));
+            session.addPrisoner(prisoner);
+
+            session.performRefreshingScreamSeries(1);
+
+            assertThat(session.isRefreshing())
+                    .isTrue();
+
+            assertThat(session.getScreamSeriesCount())
+                    .isEqualTo(1);
+
+            assertThat(session.getPrisoners())
+                    .contains(prisoner);
+
+            assertThat(vogon.getEmotions())
+                    .contains(Emotion.RESTED, Emotion.READY_FOR_NASTINESS);
+        }
+
+        @Test
+        @DisplayName("Должен выбрасывать исключение при некорректном количестве серий")
+        void shouldThrowException_whenSeriesCountIsInvalid() {
+            Character vogon = new Character("Простетный Вогон Джельц", "вогон");
+            TortureSession session = new TortureSession(vogon);
+
+            assertThatThrownBy(() -> session.performRefreshingScreamSeries(0))
+                    .isInstanceOf(IllegalArgumentException.class);
+
+            assertThatThrownBy(() -> session.performRefreshingScreamSeries(-1))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+
+        @Test
+        @DisplayName("Должен выбрасывать исключение при добавлении null пленника")
+        void shouldThrowException_whenPrisonerIsNull() {
+            Character vogon = new Character("Простетный Вогон Джельц", "вогон");
+            TortureSession session = new TortureSession(vogon);
+
+            assertThatThrownBy(() -> session.addPrisoner(null))
+                    .isInstanceOf(NullPointerException.class);
+        }
     }
 }
-

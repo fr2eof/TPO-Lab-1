@@ -36,4 +36,13 @@ public class TortureSession {
         torturer.addEmotion(Emotion.RESTED);
         torturer.addEmotion(Emotion.READY_FOR_NASTINESS);
     }
+
+    public Character getTorturer() {
+        return this.torturer;
+    }
+
+    public double getNastinessLevel() {
+        NastinessCalculator calculator = new NastinessCalculator();
+        return calculator.calculateNastinessLevel(this);
+    }
 }

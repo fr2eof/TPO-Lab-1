@@ -1,27 +1,22 @@
 package se.ifmo.ru.lab1.task3;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+
 import java.util.Objects;
 
 public class TortureSession {
 
     private final Character torturer;
-    private final List<Character> prisoners = new ArrayList<>();
+    private final PrisonerGroup prisonerGroup;
     private int screamSeriesCount;
     private boolean refreshing;
 
-    public TortureSession(Character torturer) {
+    public TortureSession(Character torturer, PrisonerGroup prisonerGroup) {
         this.torturer = Objects.requireNonNull(torturer, "torturer");
+        this.prisonerGroup = Objects.requireNonNull(prisonerGroup, "prisonerGroup");
     }
 
-    public Character getTorturer() {
-        return torturer;
-    }
-
-    public List<Character> getPrisoners() {
-        return Collections.unmodifiableList(prisoners);
+    public PrisonerGroup getPrisonerGroup() {
+        return prisonerGroup;
     }
 
     public int getScreamSeriesCount() {
@@ -32,19 +27,13 @@ public class TortureSession {
         return refreshing;
     }
 
-    public void addPrisoner(Character prisoner) {
-        prisoners.add(Objects.requireNonNull(prisoner, "prisoner"));
-    }
+    public void performRefreshingScreamSeries(ScreamSeries series) {
+        ScreamSeries s = Objects.requireNonNull(series, "series");
 
-    public void performRefreshingScreamSeries(int seriesCount) {
-        if (seriesCount <= 0) {
-            throw new IllegalArgumentException("Series count must be positive");
-        }
-        this.screamSeriesCount += seriesCount;
+        this.screamSeriesCount += s.getCount();
         this.refreshing = true;
 
         torturer.addEmotion(Emotion.RESTED);
         torturer.addEmotion(Emotion.READY_FOR_NASTINESS);
     }
 }
-

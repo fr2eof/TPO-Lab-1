@@ -12,6 +12,8 @@ public class Character {
     private final Set<Emotion> emotions = EnumSet.noneOf(Emotion.class);
     private SmileSpeed smileSpeed;
     private SmileReason smileReason;
+    private Smile smile;
+
 
     public Character(String name, String species) {
         this.name = Objects.requireNonNull(name, "name");
@@ -46,9 +48,15 @@ public class Character {
         return smileReason;
     }
 
-    public void smile(SmileSpeed speed, SmileReason reason) {
-        this.smileSpeed = Objects.requireNonNull(speed, "speed");
-        this.smileReason = Objects.requireNonNull(reason, "reason");
+    public Smile getSmile() {
+        return this.smile;
+    }
+
+    public void smile(Smile smile) {
+        Smile s = Objects.requireNonNull(smile, "smile");
+
+        this.smileSpeed = s.getSpeed();
+        this.smileReason = s.getReason();
     }
 }
 

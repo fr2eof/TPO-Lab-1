@@ -169,4 +169,58 @@ class DomainModelTest {
                     .isInstanceOf(NullPointerException.class);
         }
     }
+    @Nested
+    @DisplayName("NastinessCalculator")
+    class NastinessCalculatorTests {
+
+        @Test
+        @DisplayName("Должен корректно считать уровень гнусности")
+        void shouldCalculateNastinessLevel() {
+            Character vogon = new Character("Вогон", "вогон");
+            vogon.addEmotion(Emotion.RESTED);
+
+            PrisonerGroup group = new PrisonerGroup();
+            group.addPrisoner(new Character("п1", "человек"));
+            group.addPrisoner(new Character("п2", "человек"));
+
+            TortureSession session = new TortureSession(vogon, group);
+            session.performRefreshingScreamSeries(new ScreamSeries(2));
+
+            NastinessCalculator calculator = new NastinessCalculator();
+
+            double actualValue = calculator.calculateNastinessLevel(session);
+
+            assertThat(actualValue)
+                    .isGreaterThan(0.0);
+        }
+
+        @Test
+        @DisplayName("Должен увеличиваться при росте количества серий")
+        void shouldIncrease_whenSeriesIncrease() {
+            Character vogon = new Character("Вогон", "вогон");
+            PrisonerGroup group = new PrisonerGroup();
+
+            TortureSession session1 = new TortureSession(vogon, group);
+            session1.performRefreshingScreamSeries(new ScreamSeries(1));
+
+            TortureSession session2 = new TortureSession(vogon, group);
+            session2.performRefreshingScreamSeries(new ScreamSeries(3));
+
+            NastinessCalculator calculator = new NastinessCalculator();
+
+            double value1 = calculator.calculateNastinessLevel(session1);
+            double value2 = calculator.calculateNastinessLevel(session2);
+
+            assertThat(value2).isGreaterThan(value1);
+        }
+
+        @Test
+        @DisplayName("Должен выбрасывать исключение при null")
+        void shouldThrowException_whenSessionIsNull() {
+            NastinessCalculator calculator = new NastinessCalculator();
+
+            assertThatThrownBy(() -> calculator.calculateNastinessLevel(null))
+                    .isInstanceOf(NullPointerException.class);
+        }
+    }
 }

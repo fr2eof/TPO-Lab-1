@@ -38,6 +38,25 @@ class CosSeriesTest {
             assertThatThrownBy(() -> cosSeries.calculate(x, invalidEpsilonNegative))
                     .isInstanceOf(IllegalArgumentException.class);
         }
+
+        @Test
+        @DisplayName("Должен корректно обрабатывать NaN")
+        void shouldHandleNaN() {
+            double x = Double.NaN;
+
+            double actualValue = cosSeries.calculate(x, EPSILON);
+
+            assertThat(actualValue).isNaN();
+        }
+
+        @Test
+        @DisplayName("Должен корректно обрабатывать бесконечность")
+        void shouldHandleInfinity() {
+            double x = Double.POSITIVE_INFINITY;
+
+            assertThatThrownBy(() -> cosSeries.calculate(x, EPSILON))
+                    .isInstanceOf(Exception.class); // или уточни поведение
+        }
     }
 
     @Nested
@@ -81,7 +100,7 @@ class CosSeriesTest {
 
 
             assertThat(actualValue)
-                    .isCloseTo(expectedValue, within(Math.pow(10, 8)));
+                    .isCloseTo(expectedValue, within(Math.pow(10, -8)));
         }
 
         @ParameterizedTest
